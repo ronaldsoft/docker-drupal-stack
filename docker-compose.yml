@@ -1,0 +1,118 @@
+version: "3.7"
+
+networks:
+  internal:
+    driver: bridge
+  network:
+    driver: bridge
+    
+services:
+#  drupal-varnish:
+#    image: drupal:varnish
+#    build:
+#      context: ./
+#      dockerfile: docker/varnish/Dockerfile
+#    depends_on:
+#      - drupal-nginx
+#    environment:
+#      VARNISH_SECRET: secret
+#      VARNISH_BACKEND_HOST: nginx
+#      VARNISH_BACKEND_PORT: 8080
+#      VARNISH_CONFIG_PRESET: drupal
+#      VARNISH_PURGE_EXTERNAL_REQUEST_HEADER: X-Real-IP  
+#      
+  drupal-php:
+    image: drupal:php
+    build:
+      context: ./
+      dockerfile: docker/php-fpm/Dockerfile
+    env_file:
+      - .env   
+    restart: unless-stopped
+    networks:
+      - internal
+      - network
+    ports:
+      - 9000:9000
+    volumes:
+      #- ./:/var/www/:rw,cached
+    ## Alternative for macOS users
+      - mutagen:/var/www/
+    depends_on:
+      - mysql-server
+      
+  drupal-nginx:
+    image: drupal:nginx
+    build:
+      context: ./
+      dockerfile: docker/nginx/Dockerfile
+    depends_on:
+      - drupal-php   
+      - mysql-server
+    ports:
+      - 8080:80
+    networks:
+      - internal
+      - network
+    volumes:
+      #- ./:/var/www/:rw,cached
+      - ./docker/nginx/conf.d/:/etc/nginx/conf.d/
+    ## Alternative for macOS users
+      - mutagen:/var/www/      
+  mysql-server:
+    image: mysql:5.7
+    container_name: ${DB_HOST}
+    restart: always
+    environment:
+      MYSQL_DATABASE: '${DB_NAME}'
+      # So you don't have to use root, but you can if you like
+      MYSQL_USER: '${DB_USER}'
+      # You can use whatever password you like
+      MYSQL_PASSWORD: '${DB_PASS}'
+      # Password for root access
+      MYSQL_ROOT_PASSWORD: '${DB_PASS}'
+    #command: mysql --host=mysql-server --execute="show databases;"  
+    networks:
+      - internal   
+      - network
+    ports:
+      # MySQL Port running
+      - '3306:3306'
+    expose:
+      - 3306        
+      
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    #links:
+    #  - mysql-server:db
+    ports:
+      - 8000:80    
+    environment:
+      PMA_HOST: ${DB_HOST}
+      PMA_ARBITRARY: 1
+      PMA_PORT: 3306
+      MYSQL_DATABASE: '${DB_NAME}'
+      # So you don't have to use root, but you can if you like
+      MYSQL_USER: '${DB_USER}'
+      # You can use whatever password you like
+      MYSQL_PASSWORD: '${DB_PASS}'
+      # Password for root access
+      MYSQL_ROOT_PASSWORD: '${DB_PASS}'
+    networks:
+      - internal
+      
+    depends_on:
+      - mysql-server
+      
+  mutagen:
+    build:
+      context: ./
+      dockerfile: docker/mutagen/Dockerfile
+    init: true
+    container_name: "mutagen"
+    volumes:
+    - mutagen:/var/www/     
+
+volumes:
+# For macOS users (Mutagen)
+  mutagen:     

@@ -1,0 +1,26 @@
+sync:
+    defaults:
+      ignore:
+        vcs: true
+        paths:
+          - .DSundefined_Store
+          - .history
+          - .idea
+    mutagen:
+      alpha: "."
+      beta: "docker://mutagen/var/www/html"
+      mode: "two-way-resolved"
+      configurationBeta:
+        permissions:
+          defaultFileMode: 644
+          defaultDirectoryMode: 755
+          defaultOwner: "www-data"
+          defaultGroup: "www-data"
+      # # Example of optimisation (not required by default)
+      # ignore:
+      #   paths:
+      #     - "/vendor/"
+      #     - "/web/core/"
+      #     - "/web/modules/contrib/"
+      #     - "/web/themes/contrib/"
+      #     - "/web/sites/*/files/"
